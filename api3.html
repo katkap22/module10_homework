@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        #chat {
+            width: 380px;
+            padding: 20px;
+            margin: 15px auto;
+        }
+        .info_output {
+            color: gray;
+            font-style: italic;
+        }
+        .chat_output {
+            margin: 20px 0;
+            border:2px solid rgb(0, 204, 255);
+            padding: 10px;
+            height: 150px;
+            overflow-y: scroll;
+            position: relative;
+            display: flex;
+            flex-wrap: nowrap;
+            flex-direction: column;
+        }
+        .chat_output > div {
+            max-width: 80%;
+            padding: 5px 10px;
+            margin: 5px 0;
+            border-radius: 3px;
+            color: #000;
+        }
+        .chat_output .recieved {
+            border: 2px solid rgb(0, 204, 255);
+            border-radius: 5px;
+            align-self: flex-start;
+        }
+        .chat_output .sent {
+           border: 2px solid rgb(0, 204, 255);
+           border-radius: 5px;
+           align-self: flex-end;
+        }
+        .chat_input {
+            display: flex;
+            justify-content: space-between;
+        }
+        .chat_input input {
+            padding: 5px 10px;
+            border: 2px solid rgb(0, 204, 255);
+        }
+        .btn_send,.btn_geo {
+            padding: 7px 10px;
+            color: #000;
+            background:rgb(147, 217, 234);
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        } 
+        .chat_output .sent a {
+            cursor: pointer;
+            text-decoration: none;
+            color: rgb(0, 204, 255);
+        }
+    </style>
+    <title>task_3_test</title>
+</head>
+<body>
+    <div id="chat">
+        <div class="chat_input">
+            <input type="text" placeholder="Введите текст сообщения">
+            <button class="btn_send">Отправить</button>
+            <button class="btn_geo">Геолокация</button>
+        </div>
+
+        <div class="chat_output"></div>
+        
+        <div class="info_output"></div>   
+    </div>
+
+    <script>
+        const wsUri = "wss://echo-ws-service.herokuapp.com/";
+
+        function pageLoaded() {
+            const infoOutput = document.querySelector('.info_output');
+            const chatOutput = document.querySelector('.chat_output');
+            const input = document.querySelector('input');
+            const sendBtn = document.querySelector('.btn_send');
+            const geoBtn = document.querySelector('.btn_geo');
+
+            let socket = new WebSocket(wsUri);
+
+            socket.onopen = () => {
+                infoOutput.textContent = "Соединение установлено";
+            };
+
+            socket.onmessage = (event) => {
+                writeToChat(event.data, true); 
+            };
+
+            socket.onerror = () => {
+                infoOutput.textContent = "При передачи данных произошла ошибка";
+            };
+
+            sendBtn.addEventListener('click', sendMessage);
+            
+            function sendMessage() {
+                if (!input.value) {
+                    return;
+                } else {
+                    socket.send(input.value);
+                    writeToChat(input.value, false);
+                    input.value = '';
+                }
+            };
+
+            function writeToChat(message, recieved) {
+                let messageHTML = `<div class="${recieved? "recieved":"sent"}">${message}</div>`;
+                
+                
+                chatOutput.innerHTML += messageHTML;
+                chatOutput.scrollTop = chatOutput.scrollHeight; 
+            }
+
+            geoBtn.addEventListener('click', getLocation);  
+
+            function getLocation() {
+
+                const success = (position) => {
+                    const latitude  = position.coords.latitude;
+                    const longitude = position.coords.longitude;
+                    
+                    let mapLink = `<a href="https://www.openstreetmap.org/#map=18/${latitude}/${longitude}" target="_blank">Гео-локация</a>`;
+                    writeToChat(mapLink, false);
+                }
+
+                const error = () => {
+                   writeToChat('Невозможно получить ваше местоположение');
+                }
+
+                if (!navigator.geolocation) {
+                    writeToChat('Geolocation не поддерживается вашим браузером');
+                } else {
+                    navigator.geolocation.getCurrentPosition(success, error);
+                }         
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", pageLoaded);
+
+    </script>
+</body>
+</html>
